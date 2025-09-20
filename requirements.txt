@@ -1,3 +1,4 @@
 streamlit
-pandas
-plotly
+   pandas
+   plotly>=4.14.0
+   openpyxl
