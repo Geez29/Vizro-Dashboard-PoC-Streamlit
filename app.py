@@ -1,120 +1,107 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 
-# -----------------------------
-# Load Excel or fallback to dummy data
-# -----------------------------
-EXCEL_FILE = "Cloud_Actual_Optimization.xlsx"
-
+# =========================
+# Load Excel Data
+# =========================
 try:
-    df_csp = pd.read_excel(EXCEL_FILE, sheet_name="CSP")
-    df_services = pd.read_excel(EXCEL_FILE, sheet_name="Services")
-    df_marketplace = pd.read_excel(EXCEL_FILE, sheet_name="Marketplace")
-except FileNotFoundError:
-    st.warning(f"{EXCEL_FILE} not found. Using dummy data.")
+    excel_file = "Cloud_Actual_Optimization.xlsx"
+    df_csp = pd.read_excel(excel_file, sheet_name="CSP")
+    df_services = pd.read_excel(excel_file, sheet_name="Services")
+    df_app = pd.read_excel(excel_file, sheet_name="Application")
+except Exception as e:
+    st.warning(f"Error reading Excel: {e}")
+    st.info("Using dummy data instead")
+    # Dummy data
     df_csp = pd.DataFrame({
         "CSP": ["AWS", "Azure", "GCP"],
-        "TotalSpend": [120000, 95000, 78000]
+        "Spend": [100000, 75000, 50000],
+        "Marketplace": [15000, 12000, 8000]
     })
     df_services = pd.DataFrame({
-        "CSP": ["AWS", "AWS", "Azure", "Azure", "GCP", "GCP"],
-        "Service": ["Compute", "Storage", "Compute", "Database", "Compute", "Storage"],
-        "Spend": [50000, 70000, 45000, 50000, 40000, 38000]
+        "Service": ["Compute", "Database", "Storage"],
+        "Spend": [50000, 40000, 35000]
     })
-    df_marketplace = pd.DataFrame({
-        "CSP": ["AWS", "Azure", "GCP"],
-        "MarketplaceSpend": [15000, 12000, 10000]
+    df_app = pd.DataFrame({
+        "Application": ["App1", "App2", "App3"],
+        "Spend": [40000, 35000, 30000]
     })
 
-# -----------------------------
-# Page Setup
-# -----------------------------
+# =========================
+# Page Title
+# =========================
 st.set_page_config(page_title="Cloud Cost Dashboard", layout="wide")
 st.title("Cloud Cost Dashboard")
 
-# -----------------------------
-# CSP Selection
-# -----------------------------
-csp_list = df_csp["CSP"].unique()
-selected_csp = st.selectbox("Select CSP", csp_list)
+# =========================
+# CSP Section
+# =========================
+st.header("CSP Overview")
 
-df_services_csp = df_services[df_services["CSP"] == selected_csp]
-df_marketplace_csp = df_marketplace[df_marketplace["CSP"] == selected_csp]
-
-# -----------------------------
-# McKinsey Blue Color
-# -----------------------------
-mc_blue = "#0b3d91"      # Dark blue
-mc_light = "#1f77b4"     # Light blue for bars
-
-# -----------------------------
-# Waterfall Charts: Services and Marketplace
-# -----------------------------
+# Waterfall Charts side-by-side
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader(f"{selected_csp} Services Spend Waterfall")
+    st.subheader("Services Spend Waterfall")
     fig_services = go.Figure(go.Waterfall(
-        name="Services",
-        orientation="v",
-        measure=["relative"]*len(df_services_csp),
-        x=df_services_csp["Service"],
-        y=df_services_csp["Spend"],
-        decreasing={"marker":{"color":mc_light}},
-        increasing={"marker":{"color":mc_light}},
-        totals={"marker":{"color":mc_blue}}
+        x=df_csp["CSP"],
+        y=df_csp["Spend"],
+        text=df_csp["Spend"],
+        textposition="outside",
+        marker=dict(color="#0052cc")  # McKinsey-style blue
     ))
     fig_services.update_layout(
-        showlegend=False,
-        font=dict(family="Calibri"),
-        hovermode="x unified"
+        title="Services Spend by CSP",
+        font=dict(family="Calibri", size=12, color="#000000")
     )
     st.plotly_chart(fig_services, use_container_width=True)
 
 with col2:
-    st.subheader(f"{selected_csp} Marketplace Spend Waterfall")
+    st.subheader("Marketplace Spend Waterfall")
     fig_market = go.Figure(go.Waterfall(
-        name="Marketplace",
-        orientation="v",
-        measure=["relative"]*len(df_marketplace_csp),
-        x=df_marketplace_csp["CSP"],
-        y=df_marketplace_csp["MarketplaceSpend"],
-        decreasing={"marker":{"color":mc_light}},
-        increasing={"marker":{"color":mc_light}},
-        totals={"marker":{"color":mc_blue}}
+        x=df_csp["CSP"],
+        y=df_csp["Marketplace"],
+        text=df_csp["Marketplace"],
+        textposition="outside",
+        marker=dict(color="#3399ff")  # lighter blue
     ))
     fig_market.update_layout(
-        showlegend=False,
-        font=dict(family="Calibri"),
-        hovermode="x unified"
+        title="Marketplace Spend by CSP",
+        font=dict(family="Calibri", size=12, color="#000000")
     )
     st.plotly_chart(fig_market, use_container_width=True)
 
-# -----------------------------
-# Heatmap for Services
-# -----------------------------
-st.subheader(f"{selected_csp} Services Spend Heatmap")
-heatmap_data = df_services_csp.pivot_table(index="Service", values="Spend", aggfunc=np.sum)
-fig_heatmap = go.Figure(data=go.Heatmap(
-    z=heatmap_data.values,
-    x=heatmap_data.columns,
-    y=heatmap_data.index,
-    colorscale=[[0, "#c6dbef"], [1, mc_blue]],  # light to dark blue
-    text=heatmap_data.values,
-    texttemplate="$%{text:,.0f}",
-    hovertemplate="Service: %{y}<br>Value: $%{z}<extra></extra>"
+# =========================
+# Services Section
+# =========================
+st.header("Services Overview")
+fig_services_bar = go.Figure(go.Bar(
+    x=df_services["Service"],
+    y=df_services["Spend"],
+    text=df_services["Spend"],
+    textposition="auto",
+    marker_color="#0052cc"
 ))
-fig_heatmap.update_layout(font=dict(family="Calibri"))
-st.plotly_chart(fig_heatmap, use_container_width=True)
+fig_services_bar.update_layout(
+    title="Spend by Service",
+    font=dict(family="Calibri", size=12, color="#000000")
+)
+st.plotly_chart(fig_services_bar, use_container_width=True)
 
-# -----------------------------
-# CSP Summary Table
-# -----------------------------
-st.subheader("CSP Spend Summary")
-st.dataframe(df_csp)
-
-# -----------------------------
-# Note: Streamlit automatically runs app, no Dash app.run() needed
-# -----------------------------
+# =========================
+# Heatmap (simplified)
+# =========================
+st.header("Application Spend Heatmap")
+fig_heat = go.Figure(data=go.Heatmap(
+    z=df_app["Spend"],
+    x=df_app["Application"],
+    y=["Spend"],
+    colorscale=[[0, '#cce0ff'], [1, '#0052cc']],  # light blue to McKinsey blue
+    showscale=True
+))
+fig_heat.update_layout(
+    title="Application Spend Heatmap",
+    font=dict(family="Calibri", size=12, color="#000000")
+)
+st.plotly_chart(fig_heat, use_container_width=True)
