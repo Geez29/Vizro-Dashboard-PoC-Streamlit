@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 # -----------------------------
-# Load Excel or use dummy data
+# Load Excel or fallback to dummy data
 # -----------------------------
 EXCEL_FILE = "Cloud_Actual_Optimization.xlsx"
 
@@ -15,27 +15,24 @@ try:
 except FileNotFoundError:
     st.warning(f"{EXCEL_FILE} not found. Using dummy data.")
 
-    # Dummy CSP data
     df_csp = pd.DataFrame({
         "CSP": ["AWS", "Azure", "GCP"],
         "Spend": [120000, 95000, 78000]
     })
 
-    # Dummy Services data
     df_services = pd.DataFrame({
         "CSP": ["AWS", "AWS", "Azure", "Azure", "GCP", "GCP"],
         "Service": ["Compute", "Storage", "Compute", "Database", "Compute", "Storage"],
         "Spend": [50000, 70000, 45000, 50000, 40000, 38000]
     })
 
-    # Dummy Marketplace data
     df_marketplace = pd.DataFrame({
         "CSP": ["AWS", "Azure", "GCP"],
         "MarketplaceSpend": [15000, 12000, 10000]
     })
 
 # -----------------------------
-# Page Title
+# Page Setup
 # -----------------------------
 st.set_page_config(page_title="Cloud Cost Dashboard", layout="wide")
 st.title("Cloud Cost Dashboard")
@@ -46,7 +43,6 @@ st.title("Cloud Cost Dashboard")
 csp_list = df_csp["CSP"].unique()
 selected_csp = st.selectbox("Select CSP", csp_list)
 
-# Filter data based on CSP
 df_services_csp = df_services[df_services["CSP"] == selected_csp]
 df_marketplace_csp = df_marketplace[df_marketplace["CSP"] == selected_csp]
 
@@ -63,7 +59,7 @@ with col1:
         measure=["relative"]*len(df_services_csp),
         x=df_services_csp["Service"],
         y=df_services_csp["Spend"],
-        decreasing={"marker":{"color":"#1f77b4"}},  # McKinsey blue
+        decreasing={"marker":{"color":"#1f77b4"}},
         increasing={"marker":{"color":"#1f77b4"}},
         totals={"marker":{"color":"#0b3d91"}}
     ))
@@ -86,7 +82,7 @@ with col2:
     st.plotly_chart(fig_market, use_container_width=True)
 
 # -----------------------------
-# Services Heatmap
+# Heatmap
 # -----------------------------
 st.subheader(f"{selected_csp} Services Spend Heatmap")
 heatmap_data = df_services_csp.pivot_table(index="Service", values="Spend", aggfunc=np.sum)
@@ -102,7 +98,7 @@ fig_heatmap.update_layout(font=dict(family="Calibri"))
 st.plotly_chart(fig_heatmap, use_container_width=True)
 
 # -----------------------------
-# Additional Tables or Info
+# CSP Summary Table
 # -----------------------------
 st.subheader("CSP Spend Summary")
 st.dataframe(df_csp)
