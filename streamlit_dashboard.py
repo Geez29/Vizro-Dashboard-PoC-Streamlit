@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import plotly.express as px
 
 # =========================
 # Page Configuration (must be first Streamlit command)
@@ -15,10 +14,42 @@ st.set_page_config(page_title="Cloud Cost Dashboard", layout="wide")
 def load_data():
     try:
         excel_file = "Cloud_Actual_Optimization.xlsx"
-        df_csp = pd.read_excel(excel_file, sheet_name="CSP")
-        df_services = pd.read_excel(excel_file, sheet_name="Services")
-        df_app = pd.read_excel(excel_file, sheet_name="Application")
-        return df_csp, df_services, df_app, None
+        
+        # Try different possible sheet names
+        xl_file = pd.ExcelFile(excel_file)
+        sheet_names = xl_file.sheet_names
+        
+        # Find the correct sheet names (case-insensitive)
+        csp_sheet = None
+        services_sheet = None
+        app_sheet = None
+        
+        for sheet in sheet_names:
+            if sheet.lower() in ['csp', 'csps', 'cloud service provider', 'providers']:
+                csp_sheet = sheet
+            elif sheet.lower() in ['service', 'services']:
+                services_sheet = sheet
+            elif sheet.lower() in ['app', 'application', 'applications']:
+                app_sheet = sheet
+        
+        # Load data with found sheet names
+        if csp_sheet:
+            df_csp = pd.read_excel(excel_file, sheet_name=csp_sheet)
+        else:
+            raise Exception(f"CSP sheet not found. Available sheets: {sheet_names}")
+            
+        if services_sheet:
+            df_services = pd.read_excel(excel_file, sheet_name=services_sheet)
+        else:
+            raise Exception(f"Services sheet not found. Available sheets: {sheet_names}")
+            
+        if app_sheet:
+            df_app = pd.read_excel(excel_file, sheet_name=app_sheet)
+        else:
+            raise Exception(f"Application sheet not found. Available sheets: {sheet_names}")
+        
+        return df_csp, df_services, df_app, None, sheet_names
+        
     except Exception as e:
         error_msg = f"Error reading Excel: {e}"
         # Dummy data
@@ -35,10 +66,10 @@ def load_data():
             "Application": ["App1", "App2", "App3"],
             "Spend": [40000, 35000, 30000]
         })
-        return df_csp, df_services, df_app, error_msg
+        return df_csp, df_services, df_app, error_msg, []
 
 # Load the data
-df_csp, df_services, df_app, error_msg = load_data()
+df_csp, df_services, df_app, error_msg, sheet_names = load_data()
 
 # =========================
 # Page Title
@@ -47,7 +78,9 @@ st.title("☁️ Cloud Cost Dashboard")
 
 # Show warning if using dummy data
 if error_msg:
-    st.warning(error_msg)
+    st.error(error_msg)
+    if sheet_names:
+        st.info(f"Available sheets in Excel file: {', '.join(sheet_names)}")
     st.info("Using dummy data for demonstration")
 
 # =========================
@@ -78,11 +111,94 @@ st.divider()
 # =========================
 st.header("🏢 Cloud Service Provider Overview")
 
+# =========================
+# WATERFALL CHARTS (Consolidated All CSP View)
+# =========================
+st.subheader("📊 Consolidated CSP Waterfall Charts")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.write("**All CSP Services Spend - Waterfall**")
+    
+    # Create waterfall data for services
+    services_values = df_csp["Spend"].tolist()
+    services_labels = df_csp["CSP"].tolist()
+    
+    # Create proper waterfall chart
+    fig_services_waterfall = go.Figure()
+    
+    # Add waterfall trace
+    fig_services_waterfall.add_trace(go.Waterfall(
+        name="Services Spend",
+        orientation="v",
+        measure=["relative"] * len(services_labels),
+        x=services_labels,
+        textposition="outside",
+        text=[f"${x:,.0f}" for x in services_values],
+        y=services_values,
+        connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker": {"color": "#0052cc"}},
+        decreasing={"marker": {"color": "#cc0000"}},
+        totals={"marker": {"color": "#00cc52"}}
+    ))
+    
+    fig_services_waterfall.update_layout(
+        title="Services Spend Waterfall (All CSPs)",
+        font=dict(family="Arial", size=12),
+        yaxis_title="Spend ($)",
+        xaxis_title="Cloud Service Provider",
+        showlegend=False,
+        height=400
+    )
+    st.plotly_chart(fig_services_waterfall, use_container_width=True)
+
+with col2:
+    st.write("**All CSP Marketplace Spend - Waterfall**")
+    
+    # Create waterfall data for marketplace
+    marketplace_values = df_csp["Marketplace"].tolist()
+    marketplace_labels = df_csp["CSP"].tolist()
+    
+    fig_marketplace_waterfall = go.Figure()
+    
+    # Add waterfall trace
+    fig_marketplace_waterfall.add_trace(go.Waterfall(
+        name="Marketplace Spend",
+        orientation="v",
+        measure=["relative"] * len(marketplace_labels),
+        x=marketplace_labels,
+        textposition="outside",
+        text=[f"${x:,.0f}" for x in marketplace_values],
+        y=marketplace_values,
+        connector={"line": {"color": "rgb(63, 63, 63)"}},
+        increasing={"marker": {"color": "#3399ff"}},
+        decreasing={"marker": {"color": "#cc0000"}},
+        totals={"marker": {"color": "#00cc52"}}
+    ))
+    
+    fig_marketplace_waterfall.update_layout(
+        title="Marketplace Spend Waterfall (All CSPs)",
+        font=dict(family="Arial", size=12),
+        yaxis_title="Spend ($)",
+        xaxis_title="Cloud Service Provider",
+        showlegend=False,
+        height=400
+    )
+    st.plotly_chart(fig_marketplace_waterfall, use_container_width=True)
+
+st.divider()
+
+# =========================
+# Individual CSP Bar Charts
+# =========================
+st.subheader("📈 Individual CSP Breakdown")
+
 # Bar Charts side-by-side
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Services Spend by CSP")
+    st.write("**Services Spend by Individual CSP**")
     fig_services = go.Figure(go.Bar(
         x=df_csp["CSP"],
         y=df_csp["Spend"],
@@ -102,7 +218,7 @@ with col1:
     st.plotly_chart(fig_services, use_container_width=True)
 
 with col2:
-    st.subheader("Marketplace Spend by CSP")
+    st.write("**Marketplace Spend by Individual CSP**")
     fig_market = go.Figure(go.Bar(
         x=df_csp["CSP"],
         y=df_csp["Marketplace"],
@@ -193,27 +309,27 @@ with col1:
     st.plotly_chart(fig_app_bar, use_container_width=True)
 
 with col2:
-    # Simple heatmap alternative - using a bar chart with color coding
-    fig_app_colored = go.Figure(go.Bar(
+    # Application heatmap (alternative visualization)
+    heatmap_data = df_app["Spend"].values.reshape(1, -1)
+    
+    fig_heat = go.Figure(data=go.Heatmap(
+        z=heatmap_data,
         x=df_app["Application"],
-        y=df_app["Spend"],
-        text=[f"${x:,.0f}" for x in df_app["Spend"]],
-        textposition="auto",
-        marker=dict(
-            color=df_app["Spend"],
-            colorscale=[[0, '#cce0ff'], [1, '#0052cc']],
-            showscale=True,
-            colorbar=dict(title="Spend ($)")
-        )
+        y=["Application Spend"],
+        colorscale=[[0, '#cce0ff'], [1, '#0052cc']],
+        showscale=True,
+        text=[[f"${x:,.0f}" for x in df_app["Spend"]]],
+        texttemplate="%{text}",
+        textfont={"size": 12}
     ))
-    fig_app_colored.update_layout(
-        title="Application Spend (Color Coded)",
+    fig_heat.update_layout(
+        title="Application Spend Heatmap",
         font=dict(family="Arial", size=12),
-        yaxis_title="Spend ($)",
         xaxis_title="Application",
+        yaxis_title="",
         height=400
     )
-    st.plotly_chart(fig_app_colored, use_container_width=True)
+    st.plotly_chart(fig_heat, use_container_width=True)
 
 # =========================
 # Data Tables Section
@@ -241,3 +357,9 @@ with tab3:
     df_app_display = df_app.copy()
     df_app_display['Percentage'] = (df_app_display['Spend'] / df_app_display['Spend'].sum() * 100).round(1)
     st.dataframe(df_app_display, use_container_width=True)
+
+# =========================
+# Footer
+# =========================
+st.divider()
+st.caption("💡 Dashboard automatically detects Excel sheet names and handles missing data gracefully.")
