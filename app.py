@@ -46,6 +46,9 @@ df_marketplace_csp = df_marketplace[df_marketplace["CSP"] == selected_csp]
 # -----------------------------
 # Waterfall Charts
 # -----------------------------
+mc_blue = "#0b3d91"      # Deep McKinsey Blue for totals
+mc_light = "#1f77b4"     # Lighter McKinsey Blue for bars
+
 col1, col2 = st.columns(2)
 
 with col1:
@@ -56,11 +59,15 @@ with col1:
         measure=["relative"]*len(df_services_csp),
         x=df_services_csp["Service"],
         y=df_services_csp["Spend"],
-        decreasing={"marker":{"color":"#1f77b4"}},
-        increasing={"marker":{"color":"#1f77b4"}},
-        totals={"marker":{"color":"#0b3d91"}}
+        decreasing={"marker":{"color":mc_light}},
+        increasing={"marker":{"color":mc_light}},
+        totals={"marker":{"color":mc_blue}}
     ))
-    fig_services.update_layout(showlegend=False, font=dict(family="Calibri"))
+    fig_services.update_layout(
+        showlegend=False,
+        font=dict(family="Calibri"),
+        hovermode="x unified"
+    )
     st.plotly_chart(fig_services, use_container_width=True)
 
 with col2:
@@ -71,11 +78,15 @@ with col2:
         measure=["relative"]*len(df_marketplace_csp),
         x=df_marketplace_csp["CSP"],
         y=df_marketplace_csp["MarketplaceSpend"],
-        decreasing={"marker":{"color":"#1f77b4"}},
-        increasing={"marker":{"color":"#1f77b4"}},
-        totals={"marker":{"color":"#0b3d91"}}
+        decreasing={"marker":{"color":mc_light}},
+        increasing={"marker":{"color":mc_light}},
+        totals={"marker":{"color":mc_blue}}
     ))
-    fig_market.update_layout(showlegend=False, font=dict(family="Calibri"))
+    fig_market.update_layout(
+        showlegend=False,
+        font=dict(family="Calibri"),
+        hovermode="x unified"
+    )
     st.plotly_chart(fig_market, use_container_width=True)
 
 # -----------------------------
@@ -87,9 +98,10 @@ fig_heatmap = go.Figure(data=go.Heatmap(
     z=heatmap_data.values,
     x=heatmap_data.columns,
     y=heatmap_data.index,
-    colorscale="Blues",
+    colorscale=[[0, "#c6dbef"], [1, mc_blue]],  # light to deep blue
     text=heatmap_data.values,
-    texttemplate="%{text:$,.0f}"
+    texttemplate="%{text:$,.0f}",
+    hovertemplate="Service: %{y}<br>Value: $%{z}<extra></extra>"
 ))
 fig_heatmap.update_layout(font=dict(family="Calibri"))
 st.plotly_chart(fig_heatmap, use_container_width=True)
