@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-import plotly.graph_objects as go
 import numpy as np
+import plotly.graph_objects as go
 
 # -----------------------------
 # Load Excel or fallback to dummy data
@@ -14,18 +14,15 @@ try:
     df_marketplace = pd.read_excel(EXCEL_FILE, sheet_name="Marketplace")
 except FileNotFoundError:
     st.warning(f"{EXCEL_FILE} not found. Using dummy data.")
-
     df_csp = pd.DataFrame({
         "CSP": ["AWS", "Azure", "GCP"],
         "Spend": [120000, 95000, 78000]
     })
-
     df_services = pd.DataFrame({
         "CSP": ["AWS", "AWS", "Azure", "Azure", "GCP", "GCP"],
         "Service": ["Compute", "Storage", "Compute", "Database", "Compute", "Storage"],
         "Spend": [50000, 70000, 45000, 50000, 40000, 38000]
     })
-
     df_marketplace = pd.DataFrame({
         "CSP": ["AWS", "Azure", "GCP"],
         "MarketplaceSpend": [15000, 12000, 10000]
