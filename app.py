@@ -111,3 +111,7 @@ st.plotly_chart(fig_heatmap, use_container_width=True)
 # -----------------------------
 st.subheader("CSP Spend Summary")
 st.dataframe(df_csp)
+
+# -----------------------------
+# Run note: Streamlit runs via `streamlit run app.py` — no `app.run()` needed
+# -----------------------------
